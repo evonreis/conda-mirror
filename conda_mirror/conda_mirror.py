@@ -1093,6 +1093,7 @@ def main(
 
     # only mirror 1 package at a time
     while len(packages_to_mirror) > 0:
+        logger.info("%d packages remaining" % len(packages_to_mirror))
         to_mirror = set([packages_to_mirror.pop()])
         if len(to_mirror) > 1:
             to_mirror = set([to_mirror.pop()])
