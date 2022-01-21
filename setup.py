@@ -26,6 +26,7 @@ setup(
         "console_scripts": [
             "conda-mirror = conda_mirror.conda_mirror:cli",
             "conda-diff-tar = conda_mirror.diff_tar:main",
+            "whitelist-environment = conda_mirror.whitelist_environment:whitelist_environment",
         ]
     },
 )
