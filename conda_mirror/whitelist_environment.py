@@ -15,7 +15,9 @@ def read_conda_environments(env_paths: list):
     Used to create package whitelists for conda-mirror
 
     :param env_paths: A list of paths to conda environment definition yaml files
-    :return: a list of packages defined in the environment. The package is a dictionary with a "name" member and optional "version" and "build" members.
+    :return: a list of packages defined in the environment.
+    The package is a dictionary with a "name" member and optional
+    "version" and "build" members.
     """
     packages = []
     for env_path in env_paths:
@@ -43,15 +45,16 @@ def print_whitelist_config(packages):
     :param packages: A list of package specifications such as returned by read_conda_environment()
     :returns: none
     """
-    # output blacklist of all packages
-    config = {}
-    config["blacklist"] = [
-                              {"name": '*'}
-        ]
+    # output blacklist of all packages, then 'packages' as white list
+    config = {"blacklist": [{"name": '*'}], "whitelist": packages}
 
     # create the whitelist
-    config["whitelist"] = packages
     yaml.dump(config, sys.stdout)
+
+
+def main(conda_env_defs):
+    packages = read_conda_environments(conda_env_defs)
+    print_whitelist_config(packages)
 
 
 @click.command()
@@ -66,5 +69,4 @@ def whitelist_environment(conda_env_defs: list):
 
     conda_env_defs: paths to conda environment definition yaml files
     """
-    packages = read_conda_environments(conda_env_defs)
-    print_whitelist_config(packages)
+    main(conda_env_defs)
