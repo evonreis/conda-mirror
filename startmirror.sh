@@ -18,5 +18,5 @@ whitelist-environment $src_dir/environments/linux-64/* > $src_dir/config.yaml
 
 # mirror repo
 conda-mirror --upstream-channel $channel --target-directory $repo_dir --platform linux-64 --config $src_dir/config.yaml \
-  --no-progress --include-depends -vv
+  --no-progress --include-depends
 
