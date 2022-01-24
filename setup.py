@@ -21,12 +21,13 @@ setup(
     url="https://github.com/regro/conda-mirror",
     platforms=["Linux", "Mac OSX", "Windows"],
     license="BSD 3-Clause",
-    install_requires=["requests", "pyyaml", "tqdm"],
+    install_requires=["requests", "pyyaml", "tqdm", "click"],
     entry_points={
         "console_scripts": [
             "conda-mirror = conda_mirror.conda_mirror:cli",
             "conda-diff-tar = conda_mirror.diff_tar:main",
             "whitelist-environment = conda_mirror.whitelist_environment:whitelist_environment",
+            "get-environment-files = conda_mirror.get_environment_files:get_environment_files",
         ]
     },
 )
