@@ -1172,7 +1172,8 @@ def main(
             repodata = {"info": info, "packages": packages}
 
             # compute the packages that we have locally
-            packages_we_have = set(local_packages + _list_conda_packages(download_dir))
+            downloaded_packages = _list_conda_packages(download_dir)
+            packages_we_have = set(local_packages + downloaded_packages)
             # remake the packages dictionary with only the packages we have
             # locally
             repodata["packages"] = {
@@ -1194,12 +1195,14 @@ def main(
                 move_path = os.path.join(local_directory, f)
                 shutil.move(download_path, move_path)
 
-        # Also need to make a "noarch" channel or conda gets mad
-        noarch_path = os.path.join(target_directory, "noarch")
-        if not os.path.exists(noarch_path):
-            os.makedirs(noarch_path, exist_ok=True)
-            noarch_repodata = {"info": {}, "packages": {}}
-            _write_repodata(noarch_path, noarch_repodata)
+            local_packages += downloaded_packages
+
+            # Also need to make a "noarch" channel or conda gets mad
+            noarch_path = os.path.join(target_directory, "noarch")
+            if not os.path.exists(noarch_path):
+                os.makedirs(noarch_path, exist_ok=True)
+                noarch_repodata = {"info": {}, "packages": {}}
+                _write_repodata(noarch_path, noarch_repodata)
 
     return summary
 
