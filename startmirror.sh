@@ -21,8 +21,6 @@ whitelist-environment $src_dir/environments/linux-64/* > $src_dir/config.yaml
 conda-mirror --upstream-channel $channel --target-directory $repo_dir --platform linux-64 --config $src_dir/config.yaml \
   --no-progress --include-depends
 
-source $conda_dir/bin/activate
-conda index $repo_dir
-conda deactivate
+$conda_dir/bin/conda index $repo_dir
 
 
