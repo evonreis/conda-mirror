@@ -28,6 +28,7 @@ setup(
             "conda-diff-tar = conda_mirror.diff_tar:main",
             "whitelist-environment = conda_mirror.whitelist_environment:whitelist_environment",
             "get-environment-files = conda_mirror.get_environment_files:get_environment_files",
+            "convert-environments = conda_mirror.convert_environments:convert_environments",
         ]
     },
 )
