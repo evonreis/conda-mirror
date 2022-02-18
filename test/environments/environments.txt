@@ -1,2 +1,2 @@
-linux-64/igwn-py37.yaml
-linux-64/igwn-py38.yaml
+linux-64/igwn-py37
+linux-64/igwn-py38

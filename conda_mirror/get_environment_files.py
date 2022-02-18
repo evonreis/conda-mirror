@@ -20,6 +20,10 @@ def get_environment_files(environment_list_url: str, download_path: str):
     if result.status_code != 200:
         raise click.ClickException(f"Could not download environment list at {environment_list_url}: status code {result.status_code}")
 
+    env_file = path.join(download_path, "environments.txt")
+    with open(env_file, "wt") as f:
+        f.write(result.text)
+
     # get base url
     base_url, _ = path.split(environment_list_url)
 

@@ -27,8 +27,8 @@ def _convert_environments(environment_path, target_path, channel_url):
     with open(env_list, "tr") as f:
         envs = [line.strip() for line in f.readlines() if len(line.strip()) > 0]
     for env in envs:
-        env_file = path.join(environment_path, env)
-        target_file = path.join(target_path, env)
+        env_file = path.join(environment_path, env + ".yaml")
+        target_file = path.join(target_path, env + ".yaml")
         _convert_environment(env_file, target_file, channel_url)
 
     new_env_list = path.join(target_path, "environments.txt")
