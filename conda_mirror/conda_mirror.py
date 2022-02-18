@@ -80,6 +80,69 @@ def _maybe_split_channel(channel):
     return download_template, channel
 
 
+def _match_one(pkg_info: Dict[str, Any], matchers: Dict[str, str]):
+    for key, matcher in matchers.items():
+        if not matcher(str(pkg_info.get(key, "")).lower()):
+            return False
+    return True
+
+
+
+def _fast_match(all_packages: Dict[str, Dict[str, Any]], key_pattern_dicts):
+    pkg_by_name = {}
+    matchers_by_name = {}
+    for pkg, pkg_info in all_packages.items():
+        name = pkg_info["name"]
+        if name not in pkg_by_name:
+            pkg_by_name[name] = []
+        pkg_by_name[name].append(pkg)
+
+    filtered_packages = {}
+    matchers_list = []
+    for key_pattern_dict in key_pattern_dicts:
+        matchers: Dict[str, Callable[[Any], bool]] = {}
+        for key, pattern in sorted(key_pattern_dict.items()):
+            key = key.lower()
+            pattern = pattern.lower()
+            if key == "version" and VERSION_SPEC_CHARS.search(pattern):
+                # If matching the version and the pattern contains one of the characters
+                # in '<>=^$!', then use conda's version matcher, otherwise assume a glob.
+                if " " in pattern:
+                    # version spec also contains a build string match
+                    pattern, build_pattern = pattern.split(" ", maxsplit=1)
+                    if "build" not in matchers:
+                        matchers["build"] = _build_matcher(build_pattern)
+                matcher = _version_matcher(pattern)
+            elif key == "build" and VERSION_SPEC_CHARS.search(pattern):
+                matcher = _build_matcher(pattern)
+            else:
+                matcher = _glob_matcher(pattern)
+                if key == "name":
+                    names = fnmatch.filter(pkg_by_name.keys(), pattern)
+                    logger.debug(f"filtering on pattern {pattern} found {len(names)} names")
+                    filtered_packages.update({pkg: all_packages[pkg] for name in names  for pkg in pkg_by_name[name]})
+                    for name in names:
+                        if not name in matchers_by_name:
+                            matchers_by_name[name] = []
+                        matchers_by_name[name].append(matchers)
+            matchers[key] = matcher
+        matchers_list.append(matchers)
+    matches = {}
+    count = 0
+    for package, pkg_info in filtered_packages.items():
+        count += 1
+        matched = "drop"
+        for matchers in matchers_by_name[pkg_info["name"]]:
+            if _match_one(pkg_info, matchers):
+                matches[package] = pkg_info
+                matched = "keep"
+                break
+        logger.debug(f"[{count}/{len(filtered_packages)}] {matched} checked package {package}")
+    return matches
+    #return {package: pkg_info for package,pkg_info in all_packages.items()
+    #           if any(_match_one(pkg_info, matchers) for matchers in matchers_list)}
+
+
 def _match(all_packages: Dict[str, Dict[str, Any]], key_pattern_dict: Dict[str, str]):
     """
 
@@ -609,7 +672,7 @@ def get_repodata(channel, platform, proxies=None, ssl_verify=None):
     url = url_template.format(
         channel=channel, platform=platform, file_name="repodata.json"
     )
-
+    logger.info(f"url={url}")
     resp = requests.get(url, proxies=proxies, verify=ssl_verify).json()
     info = resp.get("info", {})
     packages = resp.get("packages", {})
@@ -898,7 +961,75 @@ def main(
     max_retries=100,
     show_progress: bool = True,
 ):
+
+    # get platform specific package
+    mirror_arch(
+        upstream_channel,
+        target_directory,
+        temp_directory,
+        platform,
+        blacklist,
+        whitelist,
+        include_depends,
+        num_threads,
+        dry_run,
+        no_validate_target,
+        minimum_free_space,
+        proxies,
+        ssl_verify,
+        chunk_size,
+        max_retries,
+        show_progress
+    )
+
+    # get generic packages (metapackages, pure python)
+    mirror_arch(
+        upstream_channel,
+        target_directory,
+        temp_directory,
+        "noarch",
+        blacklist,
+        whitelist,
+        include_depends,
+        num_threads,
+        dry_run,
+        no_validate_target,
+        minimum_free_space,
+        proxies,
+        ssl_verify,
+        chunk_size,
+        max_retries,
+        show_progress
+    )
+
+    # Also need to make a "noarch" channel or conda gets mad
+    noarch_path = os.path.join(target_directory, "noarch")
+    if not os.path.exists(noarch_path):
+        os.makedirs(noarch_path, exist_ok=True)
+        noarch_repodata = {"info": {}, "packages": {}}
+        _write_repodata(noarch_path, noarch_repodata)
+
+
+def mirror_arch(
+    upstream_channel,
+    target_directory,
+    temp_directory,
+    platform,
+    blacklist=None,
+    whitelist=None,
+    include_depends=False,
+    num_threads=1,
+    dry_run=False,
+    no_validate_target=False,
+    minimum_free_space=0,
+    proxies=None,
+    ssl_verify=None,
+    chunk_size: int = DEFAULT_CHUNK_SIZE,
+    max_retries=100,
+    show_progress: bool = True,
+):
     """
+    Mirror a particular architecture
 
     Parameters
     ----------
@@ -1027,32 +1158,37 @@ def main(
     # 2. figure out excluded packages
     excluded_packages: Set[str] = set()
     required_packages: Set[str] = set()
+
     # match blacklist conditions
     if blacklist:
-        for blist in blacklist:
-            logger.debug("exclude item: %s", blist)
-            matched_packages = list(_match(packages, blist))
-            logger.debug(pformat(matched_packages))
-            excluded_packages.update(matched_packages)
-
+        #for blist in blacklist:
+        #logger.debug("exclude item: %s", blist)
+        matched_packages = list(_fast_match(packages, blacklist))
+        logger.debug(pformat(matched_packages))
+        excluded_packages.update(matched_packages)
+        logger.info("finished blacklist")
+    initial_excluded = len(excluded_packages)
     # 3. un-blacklist packages that are actually whitelisted
     # match whitelist on blacklist
     if whitelist:
-        for wlist in whitelist:
-            matched_packages = list(_match(packages, wlist))
-            required_packages.update(matched_packages)
+        #for wlist in whitelist:
+        matched_packages = list(_fast_match(packages, whitelist))
+        required_packages.update(matched_packages)
         excluded_packages.difference_update(required_packages)
+        logger.info("finished whitelist")
 
     if include_depends:
         excluded_packages = _restore_required_dependencies(
             packages, excluded_packages, required_packages
         )
+        logger.info("finished depends")
 
     # make final mirror list of not-blacklist + whitelist
     summary["blacklisted"].update(excluded_packages)
 
     logger.info("BLACKLISTED PACKAGES")
     logger.info(pformat(sorted(excluded_packages)))
+    logger.info(f"packages={len(packages)} initial_exluded={initial_excluded} excluded={len(excluded_packages)} required={len(required_packages)}")
 
     # Get a list of all packages in the local mirror
     if dry_run:
@@ -1197,12 +1333,6 @@ def main(
 
             local_packages += downloaded_packages
 
-            # Also need to make a "noarch" channel or conda gets mad
-            noarch_path = os.path.join(target_directory, "noarch")
-            if not os.path.exists(noarch_path):
-                os.makedirs(noarch_path, exist_ok=True)
-                noarch_repodata = {"info": {}, "packages": {}}
-                _write_repodata(noarch_path, noarch_repodata)
 
     return summary
 
