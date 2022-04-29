@@ -16,7 +16,7 @@ source $src_dir/.venv/bin/activate
 get-environment-files $env_list_url $src_dir/environments
 
 # have to convert environments to point at this repo
-mkdir -p '$srcdir/environments'
+mkdir -p '$src_dir/environments'
 convert-environments $src_dir/environments $repo_dir/environments $channel_url
 
 # whitelist all the environments
