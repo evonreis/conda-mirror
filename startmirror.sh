@@ -13,7 +13,7 @@ channel_url=$6
 source $src_dir/.venv/bin/activate
 
 # download environment files
-mkdir -p '$src_dir/environments'
+mkdir -p "$src_dir/environments"
 get-environment-files $env_list_url $src_dir/environments
 
 # have to convert environments to point at this repo
