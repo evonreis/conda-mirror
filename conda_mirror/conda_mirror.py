@@ -40,17 +40,6 @@ DEFAULT_CHUNK_SIZE = 16 * 1024
 # Pattern matching special characters in version/build string matchers.
 VERSION_SPEC_CHARS = re.compile(r"[<>=^$!]")
 
-def _update_recursive(d: Dict, u: Mapping):
-    if not isinstance(d, Dict):
-        return u
-    for k, v in u.items():
-        if isinstance(v, Mapping):
-            d[k] = _update_recursive(d.get(k, {}), v)
-        else:
-            d[k] = u
-    return d
-
-
 def _maybe_split_channel(channel):
     """Split channel if it is fully qualified.
 
@@ -688,9 +677,11 @@ def get_repodata(channel, platform, proxies=None, ssl_verify=None, file_name="re
     resp = requests.get(url, proxies=proxies, verify=ssl_verify).json()
     info = resp.get("info", {})
     packages = resp.get("packages", {})
+    # also need to get packages.conda
+    packages.update(resp.get("packages.conda", {}))
     # Patch the repodata.json so that all package info dicts contain a "subdir"
     # key.  Apparently some channels on anaconda.org do not contain the
-    # 'subdir' field. I think this this might be relegated to the
+    # 'subdir' field. I think this might be relegated to the
     # Continuum-provided channels only, actually.
     for pkg_name, pkg_info in packages.items():
         pkg_info.setdefault("subdir", platform)
@@ -1164,7 +1155,8 @@ def mirror_arch(
         upstream_channel, platform, proxies=proxies, ssl_verify=ssl_verify, file_name="current_repodata.json"
     )
 
-    packages = _update_recursive(packages, packages_current)
+    # combine results from current_repodata.json and repodata.json
+    packages.update(packages_current)
 
     local_directory = os.path.join(target_directory, platform)
 
