@@ -22,6 +22,8 @@ import yaml
 
 from tqdm import tqdm
 
+from collections.abc import Mapping
+
 try:
     from conda.models.version import BuildNumberMatch, VersionSpec
 except ImportError:
@@ -37,6 +39,16 @@ DEFAULT_CHUNK_SIZE = 16 * 1024
 
 # Pattern matching special characters in version/build string matchers.
 VERSION_SPEC_CHARS = re.compile(r"[<>=^$!]")
+
+def _update_recursive(d: Dict, u: Mapping):
+    if not isinstance(d, Dict):
+        return u
+    for k, v in u.items():
+        if isinstance(v, Mapping):
+            d[k] = _update_recursive(d.get(k, {}), v)
+        else:
+            d[k] = u
+    return d
 
 
 def _maybe_split_channel(channel):
@@ -648,7 +660,7 @@ def _validate(filename, md5=None, size=None):
     return filename, None
 
 
-def get_repodata(channel, platform, proxies=None, ssl_verify=None):
+def get_repodata(channel, platform, proxies=None, ssl_verify=None, file_name="repodata.json"):
     """Get the repodata.json file for a channel/platform combo on anaconda.org
 
     Parameters
@@ -670,7 +682,7 @@ def get_repodata(channel, platform, proxies=None, ssl_verify=None):
     """
     url_template, channel = _maybe_split_channel(channel)
     url = url_template.format(
-        channel=channel, platform=platform, file_name="repodata.json"
+        channel=channel, platform=platform, file_name=file_name
     )
     logger.info(f"url={url}")
     resp = requests.get(url, proxies=proxies, verify=ssl_verify).json()
@@ -1145,8 +1157,15 @@ def mirror_arch(
         os.makedirs(os.path.join(target_directory, platform))
 
     info, packages = get_repodata(
-        upstream_channel, platform, proxies=proxies, ssl_verify=ssl_verify
+        upstream_channel, platform, proxies=proxies, ssl_verify=ssl_verify, file_name="repodata.json"
     )
+
+    info_current, packages_current = get_repodata(
+        upstream_channel, platform, proxies=proxies, ssl_verify=ssl_verify, file_name="current_repodata.json"
+    )
+
+    packages = _update_recursive(packages, packages_current)
+
     local_directory = os.path.join(target_directory, platform)
 
     # 1. validate local repo
@@ -1188,7 +1207,7 @@ def mirror_arch(
 
     logger.info("BLACKLISTED PACKAGES")
     logger.info(pformat(sorted(excluded_packages)))
-    logger.info(f"packages={len(packages)} initial_exluded={initial_excluded} excluded={len(excluded_packages)} required={len(required_packages)}")
+    logger.info(f"packages={len(packages)} initial_excluded={initial_excluded} excluded={len(excluded_packages)} required={len(required_packages)}")
 
     # Get a list of all packages in the local mirror
     if dry_run:
