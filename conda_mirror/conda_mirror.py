@@ -1327,7 +1327,16 @@ def mirror_arch(
                 name: info
                 for name, info in repodata["packages"].items()
                 if name in packages_we_have
+                if name.endswith(".tar.bz2")
             }
+
+            repodata["packages.conda"] = {
+                name: info
+                for name, info in repodata["packages"].items()
+                if name in packages_we_have
+                if name.endswith(".conda")
+            }
+
             _write_repodata(download_dir, repodata)
 
             # move new conda packages
