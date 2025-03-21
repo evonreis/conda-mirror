@@ -1316,7 +1316,10 @@ def mirror_arch(
 
             # 8. Use already downloaded repodata.json contents but prune it of
             # packages we don't want
-            repodata = {"info": info, "packages": packages}
+            repodata = {"info": info,
+                        "packages": {p: v for p, v in packages.items() if not p.endswith(".conda")},
+                        "packages.conda": {p: v for p, v in packages.items() if p.nedswith(".conda")},
+                       }
 
             # compute the packages that we have locally
             downloaded_packages = _list_conda_packages(download_dir)
@@ -1327,14 +1330,12 @@ def mirror_arch(
                 name: info
                 for name, info in repodata["packages"].items()
                 if name in packages_we_have
-                if name.endswith(".tar.bz2")
             }
 
             repodata["packages.conda"] = {
                 name: info
-                for name, info in repodata["packages"].items()
+                for name, info in repodata["packages.conda"].items()
                 if name in packages_we_have
-                if name.endswith(".conda")
             }
 
             _write_repodata(download_dir, repodata)
@@ -1346,7 +1347,7 @@ def mirror_arch(
                 logger.info("moving %s to %s", old_path, new_path)
                 shutil.move(old_path, new_path)
 
-            for f in ("current_repodata.json", "current_repodata.json.bz2", "repodata.json", "repodata.json.bz2"):
+            for f in ("current_repodata.json", "current_repodata.json.bz2"):
                 download_path = os.path.join(download_dir, f)
                 move_path = os.path.join(local_directory, f)
                 shutil.move(download_path, move_path)
