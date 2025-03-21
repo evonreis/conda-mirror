@@ -1346,7 +1346,7 @@ def mirror_arch(
                 logger.info("moving %s to %s", old_path, new_path)
                 shutil.move(old_path, new_path)
 
-            for f in ("repodata.json", "repodata.json.bz2"):
+            for f in ("current_repodata.json", "current_repodata.json.bz2", "repodata.json", "repodata.json.bz2"):
                 download_path = os.path.join(download_dir, f)
                 move_path = os.path.join(local_directory, f)
                 shutil.move(download_path, move_path)
