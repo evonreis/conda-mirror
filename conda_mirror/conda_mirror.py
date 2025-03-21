@@ -1318,7 +1318,7 @@ def mirror_arch(
             # packages we don't want
             repodata = {"info": info,
                         "packages": {p: v for p, v in packages.items() if not p.endswith(".conda")},
-                        "packages.conda": {p: v for p, v in packages.items() if p.nedswith(".conda")},
+                        "packages.conda": {p: v for p, v in packages.items() if p.endswith(".conda")},
                        }
 
             # compute the packages that we have locally
