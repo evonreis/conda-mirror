@@ -813,7 +813,7 @@ def _download_backoff_retry(
 
 
 def _list_conda_packages(local_dir):
-    """List the conda packages (*.tar.bz2 files) in `local_dir`
+    """List the conda packages (*.tar.bz2 files & *.conda files) in `local_dir`
 
     Parameters
     ----------
@@ -826,7 +826,7 @@ def _list_conda_packages(local_dir):
         List of conda packages in `local_dir`
     """
     contents = os.listdir(local_dir)
-    return fnmatch.filter(contents, "*.tar.bz2")
+    return fnmatch.filter(contents, "*.tar.bz2") + fnmatch.filter(contents, "*.conda")
 
 
 def _validate_packages(package_repodata, package_directory, num_threads=1):
