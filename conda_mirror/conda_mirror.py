@@ -1365,12 +1365,12 @@ def _write_repodata(package_dir, repodata_dict):
     if not data.endswith("\n"):
         data += "\n"
 
-    with open(os.path.join(package_dir, "repodata.json"), "w") as fo:
+    with open(os.path.join(package_dir, "current_repodata.json"), "w") as fo:
         fo.write(data)
 
     # compress repodata.json into the bz2 format. some conda commands still
     # need it
-    bz2_path = os.path.join(package_dir, "repodata.json.bz2")
+    bz2_path = os.path.join(package_dir, "current_repodata.json.bz2")
     with open(bz2_path, "wb") as fo:
         fo.write(bz2.compress(data.encode("utf-8")))
 
